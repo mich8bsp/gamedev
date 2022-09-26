@@ -29,14 +29,14 @@ class ScoreDisplay(pos: Vec2i)(implicit val world: SnakeGameWorld) extends Entit
     val textPosY: Float = world.cellSize * pos.y
     if (isGameOver) {
       renderer.batch.begin()
-      bmfont.setColor(Color.WHITE)
+      bmfont.setColor(1f,1f,1f,1f)
       bmfont.draw(renderer.batch,  s"Game Over! Score: ${score}", textPosX, textPosY)
       renderer.batch.end()
     } else {
       val alpha: Float = (math.max(ScoreFadeTimeSec - timeSinceBerryEaten, 0D) / ScoreFadeTimeSec).toFloat
       if (alpha > 0) {
         renderer.batch.begin()
-        bmfont.setColor(Color.WHITE.set(1f,1f,1f,alpha))
+        bmfont.setColor(1f,1f,1f,alpha)
         bmfont.draw(renderer.batch,s"$score", textPosX, textPosY)
         renderer.batch.end()
       }
