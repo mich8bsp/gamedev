@@ -11,7 +11,19 @@ trait World {
   lazy val batch = new SpriteBatch()
   implicit lazy val shapeRenderer = new ShapeRenderer()
 
-  val entities = mutable.Map[EntityId, Entity]()
+  private [engine] val entities = mutable.Map[EntityId, Entity[_]]()
+
+  def setEntity(id: EntityId, entity: Entity[_]): Unit = {
+    if (entities.contains(id)) {
+      throw new Exception(s"Could not add entity with id $id: another entity with that id already exists")
+    }
+    entities.put(id, entity)
+  }
+
+  def getEntity[T <: Entity[_]](id: EntityId): Option[T] = entities.get(id).flatMap {
+    case x: T => Some(x)
+    case _ => None
+  }
 
   def renderWorld(): Unit = {
     Gdx.gl.glClearColor(0.15f, 0.15f, 0.2f, 1f)
@@ -24,13 +36,14 @@ trait World {
   }
 }
 
-trait Entity {
+trait Entity[WorldImpl <: World] {
+  val world: WorldImpl
 
   var isActive: Boolean = true
   var isVisible: Boolean = true
   val events: mutable.Queue[ToEntityEvent] = mutable.Queue.empty[ToEntityEvent]
 
   def render(batch: SpriteBatch)(implicit shapeRenderer: ShapeRenderer): Unit
-  def update(implicit world: World): Seq[Event]
-  def simulate(dt: Double)(implicit world: World): Seq[Event]
+  def update(): Seq[Event]
+  def simulate(dt: Double): Seq[Event]
 }

@@ -11,7 +11,7 @@ class Engine(input: InputProcessor)
     val inputEvents: Seq[Event] = input.process()
 
     val appliedPrevFrameEvents: Seq[Event] = world.entities.flatMap { case (_, entity) =>
-      entity.update
+      entity.update()
     }.toSeq
 
     val currentFrameSimulateEvents: Seq[Event] = world.entities.flatMap { case (_, entity) =>

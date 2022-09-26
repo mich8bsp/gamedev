@@ -6,7 +6,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType
 import com.badlogic.gdx.math.MathUtils
 import com.github.mich8bsp.engine.Utils._
-import com.github.mich8bsp.engine.{Entity, Event, World}
+import com.github.mich8bsp.engine.{Entity, Event}
 import com.github.mich8bsp.snake.SnakeGameEvents._
 
 import scala.collection.mutable
@@ -17,16 +17,16 @@ object SnakeEntityIds {
   val Score = 3
 }
 
-class ScoreDisplay(pos: Vec2i, cellSize: Int) extends Entity {
+class ScoreDisplay(pos: Vec2i)(implicit val world: SnakeGameWorld) extends Entity[SnakeGameWorld] {
   var score: Int = 0
   val bmfont = new BitmapFont()
   bmfont.setColor(Color.WHITE)
 
   override def render(batch: SpriteBatch)(implicit shapeRenderer: ShapeRenderer): Unit = {
-    bmfont.draw(batch, score.toString, cellSize * pos.x, cellSize * pos.y)
+    bmfont.draw(batch, score.toString, world.cellSize * pos.x, world.cellSize * pos.y)
   }
 
-  override def update(implicit world: World): Seq[Event] = {
+  override def update(): Seq[Event] = {
     while (events.nonEmpty) {
       events.dequeue() match {
         case _: BerryEaten => score += 1
@@ -35,43 +35,60 @@ class ScoreDisplay(pos: Vec2i, cellSize: Int) extends Entity {
     Seq.empty
   }
 
-  override def simulate(dt: Double)(implicit world: World): Seq[Event] = Seq.empty
+  override def simulate(dt: Double): Seq[Event] = Seq.empty
 }
 
-class Berry(gridWidth: Int, gridHeight: Int, cellSize: Float, var position: Vec2i) extends Entity {
+class Berry(implicit val world: SnakeGameWorld) extends Entity[SnakeGameWorld] {
+  var position: Option[Vec2i] = None
 
-  override def render(batch: SpriteBatch)(implicit shapeRenderer: ShapeRenderer): Unit = {
-    shapeRenderer.begin(ShapeType.Filled)
-    shapeRenderer.setColor(Color.MAROON)
-    val x = cellSize * position.x
-    val y = cellSize * position.y
-    shapeRenderer.rect(x, y, cellSize, cellSize)
-    shapeRenderer.end()
+  private def doesIntersectWithSnake(pos: Vec2i): Boolean = {
+    world.getEntity[Snake](SnakeEntityIds.SnakeId).exists {
+      _.positions.contains(pos)
+    }
   }
 
-  override def update(implicit world: World): Seq[Event] = {
+  private def generatePosition: Vec2i = {
+    var generatedPosition = world.getPosOnGrid(MathUtils.random(0, world.gridWidth), MathUtils.random(0, world.gridHeight))
+    while (position.contains(generatedPosition) || doesIntersectWithSnake(generatedPosition)) {
+      generatedPosition = world.getPosOnGrid(MathUtils.random(0, world.gridWidth), MathUtils.random(0, world.gridHeight))
+    }
+    generatedPosition
+  }
+
+  override def render(batch: SpriteBatch)(implicit shapeRenderer: ShapeRenderer): Unit = {
+    position.foreach {
+      case Vec2i(gridX, gridY) =>
+        shapeRenderer.begin(ShapeType.Filled)
+        shapeRenderer.setColor(Color.MAROON)
+        val x = world.cellSize * gridX
+        val y = world.cellSize * gridY
+        shapeRenderer.rect(x, y, world.cellSize, world.cellSize)
+        shapeRenderer.end()
+    }
+  }
+
+  override def update(): Seq[Event] = {
+    if (position.isEmpty) {
+      position = Some(generatePosition)
+    }
     while (events.nonEmpty) {
       events.dequeue() match {
         case _: BerryEaten =>
-          val currentPosition = position
-          while (position == currentPosition ||
-              world.entities(SnakeEntityIds.SnakeId).asInstanceOf[Snake].positions.contains(position)) {
-              position = Vec2i(MathUtils.random(0, gridWidth), MathUtils.random(0, gridHeight))
-          }
+          position = Some(generatePosition)
       }
     }
     Seq.empty
   }
 
-  override def simulate(dt: Double)(implicit world: World): Seq[Event] = Seq.empty
+  override def simulate(dt: Double): Seq[Event] = Seq.empty
 }
 
-class Snake(gridWidth: Int, gridHeight: Int, cellSize: Int) extends Entity {
-  private var vel: Vec2d = Vec2d(1.5D, 0D)
+class Snake(implicit val world: SnakeGameWorld) extends Entity[SnakeGameWorld] {
+  private var vel: Vec2d = Vec2d(2.5D, 0D)
   private var dtSinceMovement: Double = 0D
   private val initialSize: Int = 5
   val positions: mutable.Buffer[Vec2i] = (-initialSize / 2 to initialSize / 2)
-    .map(x => getPosOnGrid(gridWidth / 2 + x, gridHeight / 2))
+    .map(x => world.getPosOnGrid(world.gridWidth / 2 + x, world.gridHeight / 2))
     .toBuffer
 
   override def render(batch: SpriteBatch)
@@ -80,15 +97,15 @@ class Snake(gridWidth: Int, gridHeight: Int, cellSize: Int) extends Entity {
     shapeRenderer.setColor(Color.ROYAL)
     positions.foreach {
       pos => {
-        val x = cellSize * pos.x
-        val y = cellSize * pos.y
-        shapeRenderer.rect(x, y, cellSize, cellSize)
+        val x = world.cellSize * pos.x
+        val y = world.cellSize * pos.y
+        shapeRenderer.rect(x, y, world.cellSize, world.cellSize)
       }
     }
     shapeRenderer.end()
   }
 
-  override def update(implicit world: World): Seq[Event] = {
+  override def update(): Seq[Event] = {
     val outputEvents = mutable.Buffer.empty[Event]
     while (events.nonEmpty) {
       events.dequeue() match {
@@ -101,11 +118,8 @@ class Snake(gridWidth: Int, gridHeight: Int, cellSize: Int) extends Entity {
             System.exit(0)
           }
 
-          val berryPosition: Option[Vec2i] = world.entities.get(SnakeEntityIds.BerryId)
-            .flatMap {
-              case berry: Berry => Some(berry.position)
-              case _ => None
-            }
+          val berryPosition: Option[Vec2i] = world.getEntity[Berry](SnakeEntityIds.BerryId)
+            .flatMap(_.position)
 
           val snakeIncreased: Int = if (berryPosition.contains(newSnakeHead)) {
             outputEvents.append(BerryEaten(SnakeEntityIds.BerryId))
@@ -116,13 +130,13 @@ class Snake(gridWidth: Int, gridHeight: Int, cellSize: Int) extends Entity {
           }
 
           val newSnakePositions = if (snakeHead.x < newSnakeHead.x) {
-            (snakeHead.x to newSnakeHead.x).tail.map(x => getPosOnGrid(x, snakeHead.y))
+            (snakeHead.x to newSnakeHead.x).tail.map(x => world.getPosOnGrid(x, snakeHead.y))
           } else if (snakeHead.x > newSnakeHead.x) {
-            (newSnakeHead.x to snakeHead.x).reverse.tail.map(x => getPosOnGrid(x, snakeHead.y))
+            (newSnakeHead.x to snakeHead.x).reverse.tail.map(x => world.getPosOnGrid(x, snakeHead.y))
           } else if (snakeHead.y < newSnakeHead.y) {
-            (snakeHead.y to newSnakeHead.y).tail.map(y => getPosOnGrid(snakeHead.x, y))
+            (snakeHead.y to newSnakeHead.y).tail.map(y => world.getPosOnGrid(snakeHead.x, y))
           } else {
-            (newSnakeHead.y to snakeHead.y).reverse.tail.map(y => getPosOnGrid(snakeHead.x, y))
+            (newSnakeHead.y to snakeHead.y).reverse.tail.map(y => world.getPosOnGrid(snakeHead.x, y))
           }
 
           positions.appendAll(newSnakePositions)
@@ -153,7 +167,7 @@ class Snake(gridWidth: Int, gridHeight: Int, cellSize: Int) extends Entity {
     outputEvents.toSeq
   }
 
-  override def simulate(dt: Double)(implicit world: World): Seq[Event] = {
+  override def simulate(dt: Double): Seq[Event] = {
     dtSinceMovement += dt
     val dpos = vel * dtSinceMovement
     if (dpos.size > 1D) {
@@ -163,12 +177,5 @@ class Snake(gridWidth: Int, gridHeight: Int, cellSize: Int) extends Entity {
     } else {
       Seq.empty
     }
-  }
-
-  private def getPosOnGrid(x: Int, y: Int): Vec2i = {
-    val xOnGrid = (if (x < 0) x + gridWidth else x) % gridWidth
-    val yOnGrid = (if (y < 0) y + gridHeight else y) % gridHeight
-
-    Vec2i(xOnGrid, yOnGrid)
   }
 }
