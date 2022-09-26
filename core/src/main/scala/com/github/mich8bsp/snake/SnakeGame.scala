@@ -5,10 +5,11 @@ import com.github.mich8bsp.engine.Engine
 
 class SnakeGame extends ApplicationAdapter {
   private val inputProcessor = new SnakeInputProcessor
-  private implicit val world: SnakeGameWorld = new SnakeGameWorld
-  private val engine = new Engine(inputProcessor)
+  private var engine: Engine = _
 
   override def create(): Unit = {
+    implicit val world: SnakeGameWorld = new SnakeGameWorld
+    engine = new Engine(inputProcessor)
     world.setEntity(SnakeEntityIds.SnakeId, new Snake())
     world.setEntity(SnakeEntityIds.BerryId, new Berry())
   }
