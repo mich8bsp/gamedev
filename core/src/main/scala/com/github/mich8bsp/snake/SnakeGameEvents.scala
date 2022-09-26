@@ -18,4 +18,6 @@ object SnakeGameEvents {
   case class MoveEntity(to: EntityId, dpos: Vec2i) extends ToEntityEvent
 
   case class BerryEaten(to: EntityId) extends ToEntityEvent
+
+  case class GameOver(to: EntityId) extends ToEntityEvent
 }

@@ -12,6 +12,7 @@ class SnakeGame extends ApplicationAdapter {
     engine = new Engine(inputProcessor)
     world.setEntity(SnakeEntityIds.SnakeId, new Snake())
     world.setEntity(SnakeEntityIds.BerryId, new Berry())
+    world.setEntity(SnakeEntityIds.Score, new ScoreDisplay(world.getPosOnGrid(3, 3)))
   }
 
   override def render(): Unit = {
