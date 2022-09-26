@@ -6,7 +6,7 @@ import com.badlogic.gdx.graphics.GL20
 import scala.collection.mutable
 
 trait World {
-  private implicit val renderer = new Renderer
+  private implicit val renderer: Renderer = new Renderer
   private [engine] val entities = mutable.Map[EntityId, Entity[_]]()
 
   def setEntity(id: EntityId, entity: Entity[_]): Unit = {
@@ -33,10 +33,12 @@ trait World {
 trait Entity[WorldImpl <: World] {
   val world: WorldImpl
 
-  var isVisible: Boolean = true
+  val isVisible: Boolean = initVisible
   val events: mutable.Queue[ToEntityEvent] = mutable.Queue.empty[ToEntityEvent]
 
   def render(implicit renderer: Renderer): Unit
   def update(): Seq[Event]
   def simulate(dt: Double): Seq[Event]
+
+  protected def initVisible: Boolean = true
 }

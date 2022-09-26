@@ -1,10 +1,10 @@
 package com.github.mich8bsp.snake
 
-import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType
 import com.badlogic.gdx.math.MathUtils
+import com.badlogic.gdx.{Gdx, Input}
 import com.github.mich8bsp.engine.Utils._
 import com.github.mich8bsp.engine.{Entity, Event, Renderer}
 import com.github.mich8bsp.snake.SnakeGameEvents._
@@ -15,6 +15,7 @@ object SnakeEntityIds {
   val SnakeId = 1
   val BerryId = 2
   val Score = 3
+  val SnakeController = 4
 }
 
 class ScoreDisplay(pos: Vec2i)(implicit val world: SnakeGameWorld) extends Entity[SnakeGameWorld] {
@@ -29,15 +30,15 @@ class ScoreDisplay(pos: Vec2i)(implicit val world: SnakeGameWorld) extends Entit
     val textPosY: Float = world.cellSize * pos.y
     if (isGameOver) {
       renderer.batch.begin()
-      bmfont.setColor(1f,1f,1f,1f)
-      bmfont.draw(renderer.batch,  s"Game Over! Score: ${score}", textPosX, textPosY)
+      bmfont.setColor(1f, 1f, 1f, 1f)
+      bmfont.draw(renderer.batch, s"Game Over! Score: ${score}", textPosX, textPosY)
       renderer.batch.end()
     } else {
       val alpha: Float = (math.max(ScoreFadeTimeSec - timeSinceBerryEaten, 0D) / ScoreFadeTimeSec).toFloat
       if (alpha > 0) {
         renderer.batch.begin()
-        bmfont.setColor(1f,1f,1f,alpha)
-        bmfont.draw(renderer.batch,s"$score", textPosX, textPosY)
+        bmfont.setColor(1f, 1f, 1f, alpha)
+        bmfont.draw(renderer.batch, s"$score", textPosX, textPosY)
         renderer.batch.end()
       }
     }
@@ -203,4 +204,26 @@ class Snake(implicit val world: SnakeGameWorld) extends Entity[SnakeGameWorld] {
       Seq.empty
     }
   }
+}
+
+class SnakeController(implicit val world: SnakeGameWorld) extends Entity[SnakeGameWorld] {
+  override protected def initVisible: Boolean = false
+
+  override def render(implicit renderer: Renderer): Unit = ()
+
+  override def update(): Seq[Event] = {
+    if (Gdx.input.isKeyJustPressed(Input.Keys.LEFT)) {
+      Seq(TurnLeftRequested(SnakeEntityIds.SnakeId))
+    } else if (Gdx.input.isKeyJustPressed(Input.Keys.RIGHT)) {
+      Seq(TurnRightRequested(SnakeEntityIds.SnakeId))
+    } else if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
+      Seq(TurnUpRequested(SnakeEntityIds.SnakeId))
+    } else if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
+      Seq(TurnDownRequested(SnakeEntityIds.SnakeId))
+    } else {
+      Seq.empty
+    }
+  }
+
+  override def simulate(dt: Double): Seq[Event] = Seq.empty
 }
