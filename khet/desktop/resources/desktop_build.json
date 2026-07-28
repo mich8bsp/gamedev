@@ -1,0 +1,11 @@
+{
+  "platform": "windows64",
+  "jdk": "jdk-13.0.2.zip",
+  "executable": "khet",
+  "classpath": ["khet\\desktop\\build\\libs\\desktop-1.0.jar"],
+  "mainclass": "com.github.mich8bsp.desktop.DesktopLauncher",
+  "vmargs": ["Xmx1G"],
+  "resources": [],
+  "minimizejre": "soft",
+  "output": "dist"
+}

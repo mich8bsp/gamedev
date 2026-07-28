@@ -1,0 +1,3 @@
+gradlew.bat desktop:dist
+java -jar packr.jar khet\desktop\resources\desktop_build.json
+copy 'conf' dir into jre dir
