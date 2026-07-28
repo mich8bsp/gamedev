@@ -1,0 +1,4 @@
+<img *ngIf="getPiece()" src="./assets/{{getPiece().getPieceName()}}.png" ngClass="{{(isSelected()) ? 'board-cell-selected' : ''}}">
+<div *ngIf="!getPiece()" ngClass="emptyCell">
+
+</div>

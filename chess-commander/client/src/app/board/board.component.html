@@ -1,0 +1,7 @@
+<table ngCloak background = './assets/board.png'>
+  <tr *ngFor="let row of rowsRange">
+    <td *ngFor="let col of colsRange">
+      <app-board-cell (click)="selectCell(row, col)" [board]="board" [row]="row" [col]="col"></app-board-cell>
+    </td>
+  </tr>
+</table>

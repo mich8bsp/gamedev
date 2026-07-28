@@ -1,0 +1,15 @@
+img {
+  width: 65px;
+  height: 65px;
+}
+
+.board-cell-selected {
+  img {
+    border: 5px;
+  }
+}
+
+.emptyCell {
+  width: 65px;
+  height: 65px;
+}
