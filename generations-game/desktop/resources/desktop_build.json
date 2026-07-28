@@ -1,0 +1,11 @@
+{
+  "platform": "windows64",
+  "jdk": "jdk-13.0.2.zip",
+  "executable": "generations",
+  "classpath": ["gens\\desktop\\build\\libs\\desktop-1.0.jar"],
+  "mainclass": "com.github.generations.desktop.DesktopLauncher",
+  "vmargs": ["Xmx1G"],
+  "resources": [],
+  "minimizejre": "soft",
+  "output": "dist"
+}

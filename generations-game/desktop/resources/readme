@@ -1,0 +1,4 @@
+To build executable for windows:
+
+1. run "gradlew.bat desktop:dist"
+2. run "java -jar packr.jar <path_to_desktop_build.json>"

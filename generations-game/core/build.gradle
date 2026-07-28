@@ -1,0 +1,10 @@
+apply plugin: "java"
+
+sourceCompatibility = 1.7
+[compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
+
+dependencies {
+    compile "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
+}
+
+sourceSets.main.java.srcDirs = [ "src/" ]
