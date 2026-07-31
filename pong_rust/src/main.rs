@@ -100,6 +100,12 @@ fn update(state: GameState, input: KeyInput, t: f32) -> GameState {
     //collision detection
     if ball_pos.y - BALL_RADIUS <= 0.0 || ball_pos.y + BALL_RADIUS >= VIRTUAL_HEIGHT {
         ball_vel = vec2(ball_vel.x, -ball_vel.y);
+        ball_pos = vec2(
+            ball_pos.x,
+            ball_pos
+                .y
+                .clamp(BALL_RADIUS + 1.0, VIRTUAL_HEIGHT - BALL_RADIUS - 1.0),
+        )
     }
 
     let player_paddle_rect = Rect::new(
@@ -135,6 +141,14 @@ fn update(state: GameState, input: KeyInput, t: f32) -> GameState {
         ball_vel = vec2(
             ball_speed * bounce_angle.cos() * -ball_vel.x.signum(),
             ball_speed * bounce_angle.sin(),
+        );
+        ball_pos = vec2(
+            ball_pos
+                .x
+                .clamp(BALL_RADIUS + 1.0, VIRTUAL_WIDTH - BALL_RADIUS - 1.0),
+            ball_pos
+                .y
+                .clamp(BALL_RADIUS + 1.0, VIRTUAL_HEIGHT - BALL_RADIUS - 1.0),
         );
     } else if ball_pos.x <= BALL_RADIUS || ball_pos.x >= VIRTUAL_WIDTH - BALL_RADIUS {
         if ball_pos.x <= BALL_RADIUS {
