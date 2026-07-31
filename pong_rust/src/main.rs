@@ -58,8 +58,7 @@ fn get_user_input() -> KeyInput {
     };
 }
 
-fn update(state: GameState, input: KeyInput, t: f32) -> GameState {
-    //handle user input
+fn handle_user_input(state: GameState, input: KeyInput) -> GameState {
     let player_velocity = if input.is_down == input.is_up {
         0.0
     } else if input.is_down {
@@ -67,8 +66,16 @@ fn update(state: GameState, input: KeyInput, t: f32) -> GameState {
     } else {
         -PLAYER_PADDLE_SPEED
     };
+    return GameState {
+        player_paddle: Paddle {
+            vel: player_velocity,
+            ..state.player_paddle
+        },
+        ..state
+    };
+}
 
-    //opponent AI
+fn simulate_opponent_ai(state: GameState) -> GameState {
     let deadzone = 5.0;
     let opponent_velocity = if state.ball.vel.x > 0.0
         && state.ball.pos.y > state.opponent_paddle.pos.y + deadzone
@@ -79,25 +86,52 @@ fn update(state: GameState, input: KeyInput, t: f32) -> GameState {
     } else {
         0.0
     };
+    return GameState {
+        opponent_paddle: Paddle {
+            vel: opponent_velocity,
+            ..state.opponent_paddle
+        },
+        ..state
+    };
+}
 
-    // simulate physics
+fn simulate_physics(state: GameState, t: f32) -> GameState {
     let player_pos = Vec2 {
         x: state.player_paddle.pos.x,
-        y: (state.player_paddle.pos.y + player_velocity * t)
+        y: (state.player_paddle.pos.y + state.player_paddle.vel * t)
             .clamp(PADDLE_HEIGHT / 2.0, VIRTUAL_HEIGHT - PADDLE_HEIGHT / 2.0),
     };
     let opponent_pos = Vec2 {
         x: state.opponent_paddle.pos.x,
-        y: (state.opponent_paddle.pos.y + opponent_velocity * t)
+        y: (state.opponent_paddle.pos.y + state.opponent_paddle.vel * t)
             .clamp(PADDLE_HEIGHT / 2.0, VIRTUAL_HEIGHT - PADDLE_HEIGHT / 2.0),
     };
-    let mut ball_pos = Vec2 {
+    let ball_pos = Vec2 {
         x: state.ball.pos.x + state.ball.vel.x * t,
         y: state.ball.pos.y + state.ball.vel.y * t,
     };
 
+    return GameState {
+        player_paddle: Paddle {
+            pos: player_pos,
+            ..state.player_paddle
+        },
+        opponent_paddle: Paddle {
+            pos: opponent_pos,
+            ..state.opponent_paddle
+        },
+        ball: Ball {
+            pos: ball_pos,
+            ..state.ball
+        },
+        ..state
+    };
+}
+
+fn collision_detection(state: GameState) -> GameState {
     let mut ball_vel = state.ball.vel;
-    //collision detection
+    let mut ball_pos = state.ball.pos;
+
     if ball_pos.y - BALL_RADIUS <= 0.0 || ball_pos.y + BALL_RADIUS >= VIRTUAL_HEIGHT {
         ball_vel = vec2(ball_vel.x, -ball_vel.y);
         ball_pos = vec2(
@@ -109,14 +143,14 @@ fn update(state: GameState, input: KeyInput, t: f32) -> GameState {
     }
 
     let player_paddle_rect = Rect::new(
-        player_pos.x - PADDLE_WIDTH / 2.0,
-        player_pos.y - PADDLE_HEIGHT / 2.0,
+        state.player_paddle.pos.x - PADDLE_WIDTH / 2.0,
+        state.player_paddle.pos.y - PADDLE_HEIGHT / 2.0,
         PADDLE_WIDTH,
         PADDLE_HEIGHT,
     );
     let opponent_paddle_rect = Rect::new(
-        opponent_pos.x - PADDLE_WIDTH / 2.0,
-        opponent_pos.y - PADDLE_HEIGHT / 2.0,
+        state.opponent_paddle.pos.x - PADDLE_WIDTH / 2.0,
+        state.opponent_paddle.pos.y - PADDLE_HEIGHT / 2.0,
         PADDLE_WIDTH,
         PADDLE_HEIGHT,
     );
@@ -132,9 +166,9 @@ fn update(state: GameState, input: KeyInput, t: f32) -> GameState {
 
     if player_paddle_rect.overlaps(&ball_rect) || opponent_paddle_rect.overlaps(&ball_rect) {
         let offset = if player_paddle_rect.overlaps(&ball_rect) {
-            (ball_pos.y - player_pos.y) / (PADDLE_HEIGHT / 2.0)
+            (ball_pos.y - state.player_paddle.pos.y) / (PADDLE_HEIGHT / 2.0)
         } else {
-            (ball_pos.y - opponent_pos.y) / (PADDLE_HEIGHT / 2.0)
+            (ball_pos.y - state.opponent_paddle.pos.y) / (PADDLE_HEIGHT / 2.0)
         };
         let bounce_angle = (offset * MAX_BOUNCE_ANGLE).to_radians();
         let ball_speed = ball_vel.length();
@@ -161,21 +195,23 @@ fn update(state: GameState, input: KeyInput, t: f32) -> GameState {
     }
 
     return GameState {
-        player_paddle: Paddle {
-            pos: player_pos,
-            vel: player_velocity,
-        },
-        opponent_paddle: Paddle {
-            pos: opponent_pos,
-            vel: opponent_velocity,
-        },
         ball: Ball {
             pos: ball_pos,
             vel: ball_vel,
         },
         player_score: player_score,
         opponent_score: opponent_score,
+        ..state
     };
+}
+
+fn update(state: GameState, input: KeyInput, t: f32) -> GameState {
+    let state = handle_user_input(state, input);
+    let state = simulate_opponent_ai(state);
+    let state = simulate_physics(state, t);
+    let state = collision_detection(state);
+
+    return state;
 }
 
 async fn render(state: &GameState, world_camera: &Camera2D, font: &Font) {
