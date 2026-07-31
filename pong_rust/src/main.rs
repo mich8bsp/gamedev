@@ -88,7 +88,7 @@ fn update(state: GameState, input: KeyInput, t: f32) -> GameState {
     };
     let opponent_pos = Vec2 {
         x: state.opponent_paddle.pos.x,
-        y: (state.opponent_paddle.pos.y + state.opponent_paddle.vel * t)
+        y: (state.opponent_paddle.pos.y + opponent_velocity * t)
             .clamp(PADDLE_HEIGHT / 2.0, VIRTUAL_HEIGHT - PADDLE_HEIGHT / 2.0),
     };
     let mut ball_pos = Vec2 {
