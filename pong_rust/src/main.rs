@@ -1,7 +1,7 @@
 use macroquad::{
     camera::{Camera2D, set_camera, set_default_camera},
     color::{BLACK, WHITE},
-    input::is_key_down,
+    input::{is_key_down, is_key_pressed},
     math::{Rect, Vec2, vec2},
     shapes::{draw_circle, draw_rectangle},
     text::{Font, draw_text, load_ttf_font, measure_text},
@@ -14,6 +14,8 @@ const VIRTUAL_WIDTH: f32 = 800.0;
 const VIRTUAL_HEIGHT: f32 = 600.0;
 const PADDLE_WIDTH: f32 = 10.0;
 const PADDLE_HEIGHT: f32 = 50.0;
+const PLAYER_PADDLE_SPEED: f32 = 500.0;
+const OPPONENT_PADDLE_SPEED: f32 = 300.0;
 const BALL_RADIUS: f32 = 10.0;
 const BALL_INIT_VEL: Vec2 = vec2(-400.0, 100.0);
 const SCORE_FONT_SIZE: u16 = 50;
@@ -22,17 +24,6 @@ const MAX_BOUNCE_ANGLE: f32 = 60.0;
 struct Paddle {
     pos: Vec2,
     vel: f32,
-}
-
-impl Paddle {
-    fn collision_rect(&self) -> Rect {
-        Rect::new(
-            self.pos.x - PADDLE_WIDTH / 2.0,
-            self.pos.y - PADDLE_HEIGHT / 2.0,
-            PADDLE_WIDTH,
-            PADDLE_HEIGHT,
-        )
-    }
 }
 
 struct Ball {
@@ -51,6 +42,7 @@ struct GameState {
 struct KeyInput {
     is_up: bool,
     is_down: bool,
+    is_quit: bool,
 }
 
 fn get_user_input() -> KeyInput {
@@ -58,9 +50,11 @@ fn get_user_input() -> KeyInput {
         is_key_down(macroquad::input::KeyCode::S) || is_key_down(macroquad::input::KeyCode::Down);
     let is_up =
         is_key_down(macroquad::input::KeyCode::W) || is_key_down(macroquad::input::KeyCode::Up);
+    let is_quit = is_key_pressed(macroquad::input::KeyCode::Escape);
     return KeyInput {
         is_up: is_up,
         is_down: is_down,
+        is_quit: is_quit,
     };
 }
 
@@ -69,9 +63,21 @@ fn update(state: GameState, input: KeyInput, t: f32) -> GameState {
     let player_velocity = if input.is_down == input.is_up {
         0.0
     } else if input.is_down {
-        500.0
+        PLAYER_PADDLE_SPEED
     } else {
-        -500.0
+        -PLAYER_PADDLE_SPEED
+    };
+
+    //opponent AI
+    let deadzone = 5.0;
+    let opponent_velocity = if state.ball.vel.x > 0.0
+        && state.ball.pos.y > state.opponent_paddle.pos.y + deadzone
+    {
+        OPPONENT_PADDLE_SPEED
+    } else if state.ball.vel.x > 0.0 && state.ball.pos.y < state.opponent_paddle.pos.y - deadzone {
+        -OPPONENT_PADDLE_SPEED
+    } else {
+        0.0
     };
 
     // simulate physics
@@ -80,7 +86,6 @@ fn update(state: GameState, input: KeyInput, t: f32) -> GameState {
         y: (state.player_paddle.pos.y + player_velocity * t)
             .clamp(PADDLE_HEIGHT / 2.0, VIRTUAL_HEIGHT - PADDLE_HEIGHT / 2.0),
     };
-    let opponent_velocity = state.opponent_paddle.vel;
     let opponent_pos = Vec2 {
         x: state.opponent_paddle.pos.x,
         y: (state.opponent_paddle.pos.y + state.opponent_paddle.vel * t)
@@ -256,6 +261,9 @@ async fn main() {
     loop {
         let t: f32 = get_frame_time();
         let input: KeyInput = get_user_input();
+        if input.is_quit {
+            break;
+        }
         state = update(state, input, t);
         render(&state, &world_camera, &font).await;
         next_frame().await;
